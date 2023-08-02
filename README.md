@@ -1,3 +1,2 @@
 # bidmc_eclipse
-
-Rename to pyesapi
+Created poetry install for relevant packages
