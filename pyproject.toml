@@ -1,0 +1,32 @@
+[tool.poetry]
+name = "bidmc-eclipse"
+version = "0.1.0"
+description = "PYESAPI scripts at BIDMC"
+authors = ["mf <shiliangfan@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+packages = [{include = "bidmc_eclipse"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+
+[tool.poetry.group.production.dependencies]
+pydicom = "^2.3.0"
+jupyterlab = "^3.5.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.group.dev.dependencies]
+black = "^23.1.0"
+isort = "^5.12.0"
+mypy = "^0.991"
+pytest = "^7.2.1"
+
+
+[tool.black]
+line-length = 99
+
+[tool.isort]
+profile = "black"
