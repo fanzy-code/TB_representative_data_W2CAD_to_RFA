@@ -20,6 +20,10 @@ class W2CADMeasurement:
     depth: str = ""  # DPTH XXX in mm
     data_line: list[str] = field(default_factory=list)  # <SXXX.X SYYY.Y SZZZ.Z SDDD.D>
 
+    def __repr__(self):
+       string_representation = f"Measurement number {self.measurement_number}"
+       return string_representation
+
 @dataclass
 class W2Parser:
     file_path: Path
@@ -39,7 +43,6 @@ class W2Parser:
     measurement_list: list[W2CADMeasurement] = field(default_factory=list)
 
     def read_w2(self):
-        print(self.w2cad_measurement_dictionary.keys())
         if not str(self.file_path).endswith(".ASC"):
             raise ValueError("File format not supported")
         
@@ -77,10 +80,6 @@ class W2Parser:
                 if not line:
                     break
         
-
-    def write_to_rfa(self):
-        pass
-
 
 if __name__ == "__main__":
     file_path = Path(__file__).parent.joinpath("6 MV_Open_PDD_sorted.ASC")
