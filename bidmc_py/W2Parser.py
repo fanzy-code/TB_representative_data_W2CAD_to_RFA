@@ -1,8 +1,11 @@
+import os
 import re
 import textwrap
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
+
+from definitions import ROOT_DIR
 
 
 @dataclass
@@ -61,7 +64,11 @@ class W2CADMeasurement:
                              "WDD_SSD120": "DPT",
                              "WDP": "PRO",
                              "WLP": "PRO",
-                             "DPR": "DIA"
+                             "DPR": "DIA",
+                             "BLD": "DPT",
+                             "MeasuredDepthDosesForApplicator": "DPT",
+                             "MeasuredDepthDosesForOpenBeam": "DPT",
+                             "MeasuredProfileForOpenBeam": "PRO",
                              }
         rfa_scantype = scan_type_mapping[self.data_type]
 
@@ -117,6 +124,11 @@ class W2CADMeasurement:
                                     "WDD_SSD120": "5",
                                     "WDP": "6",
                                     "WLP": "6",
+                                    "BLD": "1",
+                                    "DPR": "2",
+                                    'MeasuredProfileForOpenBeam': '2',
+                                    'MeasuredDepthDosesForApplicator': '1',
+                                    'MeasuredDepthDosesForOpenBeam': '1',
                                     }
         rfa_mea = measurement_type_mapping[self.data_type]
 
@@ -202,8 +214,13 @@ class W2Parser:
             raise ValueError("File format not supported")
 
         measurement_count = 0
-        energy_match = re.search(r'(\d+)\s*(?:MeV|MV)', self.file_path.name)
+        energy_match = re.search(r'(\d+)\s*(?:MeV|MV|X)', self.file_path.name)
         if energy_match:
+            energy = energy_match.group(1)
+
+        else:
+            # Energy is not found in filename, search the file path
+            energy_match = re.search(r'(\d+)X', str(self.file_path))
             energy = energy_match.group(1)
 
         with open(self.file_path, "r") as fp:
@@ -259,23 +276,38 @@ class W2Parser:
         """).strip()
         return rfa300_footer
     
-    def write_rfa_file(self):
+    def write_rfa_file(self, output_path):
         rfa_header = self.write_rfa_header()
         rfa_measurements = self.write_rfa_measurements()
         rfa_footer = self.write_rfa_footer()
 
         rfa_file = rfa_header + "\n" + rfa_measurements + "\n" + rfa_footer
         
-        rfa_filename = self.file_path.stem + "_rfa.ASC"
-
-        with open(rfa_filename, "w") as fp:
+        #rfa_filename = self.file_path.stem + "_rfa.ASC"
+        #rfa_filepath = output_path / rfa_filename
+        with open(output_path, "w") as fp:
             fp.write(rfa_file)
 
         return rfa_file
 
-if __name__ == "__main__":
-    file_path = Path(__file__).parent.joinpath("6 MV_Open_PDD_sorted.ASC")
-    w2file = W2Parser(file_path)
-    w2file.read_w2()
-    w2file.write_rfa_file()
+def process_files(input_dir, output_dir):
+    for root, _, files in os.walk(input_dir):
+        for file in files:
+            if file.lower().endswith(".asc"):
+                input_path = Path(root) / file
+                output_path = Path(output_dir) / Path(root).relative_to(input_dir) / (Path(file).stem + "_rfa.ASC")
+                
+                w2file = W2Parser(input_path)
+                w2file.read_w2()
+                w2file.write_rfa_file(output_path)
 
+if __name__ == "__main__":
+    results_directory = Path(ROOT_DIR).joinpath("rfa_W2CAD/")
+    varian_w2cad_directory = Path(ROOT_DIR).joinpath("references/TB_RepresentativeData_Eclipse/W2CAD/")
+
+    for sub_dir in varian_w2cad_directory.glob("**/"):
+        if sub_dir.is_dir():
+            output_dir = results_directory / sub_dir.relative_to(varian_w2cad_directory)
+            output_dir.mkdir(parents=True, exist_ok=True)
+    
+    process_files(varian_w2cad_directory, results_directory)
