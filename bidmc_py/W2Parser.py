@@ -18,14 +18,14 @@ class W2CADMeasurement:
     detector_type: str = ""  # DETY XXX CHA/DIO/DIA  (ionization chamber, semiconductor detector, diamond)
     beam_type: str = ""  # BMTY XXX PHO/ELE (High energy photons, Electron)
     data_type: str = ""  # TYPE XXX OPD/OPP/WDD/WDD_SSD80/WDD_SSD120//WDP/WLP/DPR
-    wedge_name: str = "" # WDGL XX
+    wedge_name: str = "0" # WDGL XX
     wedge_direction: str = "" # WDGD X (L,R)
     axis: str = ""  # AXIS X (X,Y horizonal axes, Z vertical axis (depth), D = diagonal)
     points: str = ""  # PNTS XXX (number of points)
     step: str = ""  # STEP XXX point separation in 1/10 mm
     SSD: str = ""  # SSD XXXX in mm
     field_size: str = ""  # FLSZ XXX*XXX in mm
-    depth: str = ""  # DPTH XXX in mm
+    depth: str = "0"  # DPTH XXX in mm
     data_line: list[str] = field(default_factory=list)  # <SXXX.X SYYY.Y SZZZ.Z SDDD.D>
 
     # Translation dictionary for the w2cad file format
@@ -47,49 +47,48 @@ class W2CADMeasurement:
        string_representation = f"Measurement number {self.measurement_number} ({self.energy} {self.beam_type})"
        return string_representation
 
-    def write_rfa300_datablock(self):
+    def write_rfa_datablock(self):
         ### See Technical Note 997-103_TN006_090130, OmniPro-Accept for RFA300 ASCII file format documentation
 
         # %MOD Mode, support for RAT only
         # %TYP Type, support for SCN only
 
         # %SCN ScanType, DPT/PRO/DIA (DepthDose, Profile, Diagonal)
-        scan_type_mapping = {"OPD": "DPT", 
-                             "OPP": "PRO", 
+        scan_type_mapping = {"OPD": "DPT",
+                             "OPP": "PRO",
                              "WDD": "DPT",
                              "WDD_SSD80": "DPT",
                              "WDD_SSD120": "DPT",
                              "WDP": "PRO",
                              "WLP": "PRO",
                              "DPR": "DIA"
-                             } 
+                             }
         rfa_scantype = scan_type_mapping[self.data_type]
 
         # %FLD DetectorType, ION/SEM/UDF (Ionization chamber, Semiconductor detector, Undefined)
         # diamond detector & undefined not supported
-        detector_type_mapping = {"CHA": "ION", 
+        detector_type_mapping = {"CHA": "ION",
                                  "DIO": "SEM"
                                  }
-        rfa_detector_type = detector_type_mapping[self.detector_type]        
+        rfa_detector_type = detector_type_mapping[self.detector_type]
 
         # %DAT DateOfCreation MM-DD-YYYY
         day, month, year = self.date.split("-")
-        rfa300_date = f"{month}-{day}-{year}"
+        rfa_date = f"{month}-{day}-{year}"
 
         # %TIM TimeOfCreation HH:MM:SS
 
         # %FSZ FieldWidth FieldHieght
         # in mm
         x, y = self.field_size.split('*')
-        rfa300_fsz = f"{x}\t{y}"
+        rfa_fsz = f"{x}\t{y}"
 
         # %BMT RadType Energy
-        beam_type_mapping = {"PHO": "PHO", 
+        beam_type_mapping = {"PHO": "PHO",
                              "ELE": "ELE"
                              }
         rfa_beam_type = beam_type_mapping[self.beam_type]
-        rfa_energy = f"{self.energy:.1f}" # energy to 1 decimal place
-        rfa300_bmt = f"{rfa_beam_type}\t{rfa_energy}"
+        rfa_energy = f"{float(self.energy):.1f}" # energy to 1 decimal place
 
         # %SSD
         rfa_ssd = self.SSD
@@ -103,26 +102,27 @@ class W2CADMeasurement:
 
         # %ASC AccessoryNbr Accessory number
 
-        # %WEG WedgeNbr 
+        # %WEG WedgeNbr
         rfa_weg = self.wedge_name
 
         # %GPO Gantry Angle, 0 supported
 
-        # %CPO CollimatorAngle, CollimatorAngle in degrees
+        # %CPO CollimatorAngle, 0 supported CollimatorAngle in degrees
 
         # %MEA MeasurementType
-        measurement_type_mapping = {"OPD": "1", 
-                                    "OPP": "2", 
+        measurement_type_mapping = {"OPD": "1",
+                                    "OPP": "2",
                                     "WDD": "5",
                                     "WDD_SSD80": "5",
-                                    "WDD_SSD120": "5", 
+                                    "WDD_SSD120": "5",
                                     "WDP": "6",
                                     "WLP": "6",
-                                    } 
+                                    }
         rfa_mea = measurement_type_mapping[self.data_type]
 
         # %PRD ProfileDepth
-        rfa_prd = self.depth
+        rfa_prd = f"{float(self.depth):.1f}"
+        rfa_prd = rfa_prd.replace(".", ",") 
 
         # %PTS NbrOfPoints
         rfa_pts = self.points
@@ -149,27 +149,47 @@ class W2CADMeasurement:
         #
         %VNR 1.0
         %MOD 	RAT
-        %TYP 	SCN 
-        %SCN 	{rfa_scantype} 
-        %FLD 	ION 
-        %DAT 	11-25-2008 
-        %TIM 	19:17:19 
-        %FSZ 	100	100
-        %BMT 	PHO	   15.0
-        %SSD 	1000
+        %TYP 	SCN
+        %SCN 	{rfa_scantype}
+        %FLD 	{rfa_detector_type}
+        %DAT 	{rfa_date}
+        %TIM 	12:00:00
+        %FSZ 	{rfa_fsz}
+        %BMT 	{rfa_beam_type}	   {rfa_energy}
+        %SSD 	{rfa_ssd}
         %BUP 	0
-        %BRD 	1000
-        %FSH 	-1
+        %BRD 	{rfa_brd}
+        %FSH 	1
         %ASC 	0
-        %WEG 	0
+        %WEG 	{rfa_weg}
         %GPO 	0
         %CPO 	0
-        %MEA 	2
-        %PRD 	300,00003427124
-        %PTS 	349
-        %STS 	    0.0	  -71.5	   30.0 # Start Scan values in mm ( X , Y , Z )
-        %EDS 	    0.0	   71.2	   30.1 # End Scan values in mm ( X , Y , Z )
+        %MEA 	{rfa_mea}
+        %PRD 	{rfa_prd}
+        %PTS 	{rfa_pts}
+        %STS 	    {start_x}	  {start_y}	   {start_z} # Start Scan values in mm ( X , Y , Z )
+        %EDS 	    {end_x}	   {end_y}	   {end_z} # End Scan values in mm ( X , Y , Z )
         """).strip()
+
+        scan_data_block = textwrap.dedent(f"""                                   
+        #
+        #	  X      Y      Z     Dose
+        #
+        """).strip()
+
+        scan_data_block += "\n"
+
+        for line in self.data_line:
+            x, y, z, dose = line.split(' ')
+            x = f"{float(x):.1f}"
+            y = f"{float(y):.1f}"
+            z = f"{float(z):.1f}"
+            dose = f"{float(dose):.1f}"
+            scan_data_block += f"=\t{x}\t{y}\t{z}\t{dose}\n"
+
+        scan_data_block += ":EOM # End of Measurement\n"
+
+        return scan_header_block + "\n" + scan_data_block
 
 @dataclass
 class W2Parser:
@@ -180,7 +200,7 @@ class W2Parser:
     def read_w2(self):
         if not str(self.file_path).endswith(".ASC"):
             raise ValueError("File format not supported")
-        
+
         measurement_count = 0
         energy_match = re.search(r'(\d+)\s*(?:MeV|MV)', self.file_path.name)
         if energy_match:
@@ -193,13 +213,13 @@ class W2Parser:
                 if line.startswith("$NUMS"):
                     self.num_scans = int(line.split()[-1])
                     continue
-                
+
                 # Start of a measurement
                 if line.startswith("$STOM"):
                     measurement_count += 1
                     measurement = W2CADMeasurement(measurement_count, energy)
                     continue
-                    
+
                 # if line.startswith any of the keys in w2cad_measurement_dictionary``
                 if any(line.startswith(key) for key in measurement.w2cad_measurement_dictionary.keys()):
                     key, value = line.split()
@@ -218,18 +238,44 @@ class W2Parser:
                 # End of file
                 if not line:
                     break
-        
-    def write_rfa300_header(self):
+
+    def write_rfa_header(self):
         # Header block for RFA300
         rfa300_header = textwrap.dedent(f"""
         :MSR 	{self.num_scans}	 # No. of measurement in file
         :SYS BDS 0   # Beam Data Scanner System
         """).strip()
         return rfa300_header
+    
+    def write_rfa_measurements(self):
+        rfa_measurements = ""
+        for measurement in self.measurement_list:
+            rfa_measurements += measurement.write_rfa_datablock()
+        return rfa_measurements
+    
+    def write_rfa_footer(self):
+        rfa300_footer = textwrap.dedent(f"""
+        :EOF # End of File
+        """).strip()
+        return rfa300_footer
+    
+    def write_rfa_file(self):
+        rfa_header = self.write_rfa_header()
+        rfa_measurements = self.write_rfa_measurements()
+        rfa_footer = self.write_rfa_footer()
+
+        rfa_file = rfa_header + "\n" + rfa_measurements + "\n" + rfa_footer
+        
+        rfa_filename = self.file_path.stem + "_rfa.ASC"
+
+        with open(rfa_filename, "w") as fp:
+            fp.write(rfa_file)
+
+        return rfa_file
 
 if __name__ == "__main__":
     file_path = Path(__file__).parent.joinpath("6 MV_Open_PDD_sorted.ASC")
     w2file = W2Parser(file_path)
     w2file.read_w2()
-    print(w2file)
+    w2file.write_rfa_file()
 
