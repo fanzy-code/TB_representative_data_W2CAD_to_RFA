@@ -141,14 +141,16 @@ class W2CADMeasurement:
 
         # %STS StartX StartY StartZ
         starting_point = self.data_line[0]
-        start_x, start_y, start_z, start_dose = starting_point.split(' ')
+        #start_x, start_y, start_z, start_dose = starting_point.split(' ') 
+        start_y, start_x, start_z, start_dose = starting_point.split(' ') # X, Y swapped for rfa format
         start_x = f"{float(start_x):.1f}"
         start_y = f"{float(start_y):.1f}"
         start_z = f"{float(start_z):.1f}"
 
         # %EDS EndX EndY EndZ
         end_point = self.data_line[-1]
-        end_x, end_y, end_z, end_dose = end_point.split(' ')
+        #end_x, end_y, end_z, end_dose = end_point.split(' ')
+        end_y, end_x, end_z, end_dose = end_point.split(' ') # X, Y swapped for rfa format
         end_x = f"{float(end_x):.1f}"
         end_y = f"{float(end_y):.1f}"
         end_z = f"{float(end_z):.1f}"
@@ -192,7 +194,8 @@ class W2CADMeasurement:
         scan_data_block += "\n"
 
         for line in self.data_line:
-            x, y, z, dose = line.split(' ')
+            #x, y, z, dose = line.split(' ')
+            y, x, z, dose = line.split(' ') # X, Y swapped
             x = f"{float(x):.1f}"
             y = f"{float(y):.1f}"
             z = f"{float(z):.1f}"
@@ -294,20 +297,22 @@ def process_files(input_dir, output_dir):
     for root, _, files in os.walk(input_dir):
         for file in files:
             if file.lower().endswith(".asc"):
-                input_path = Path(root) / file
-                output_path = Path(output_dir) / Path(root).relative_to(input_dir) / (Path(file).stem + "_rfa.ASC")
+                input_filepath = Path(root) / file
+                output_filepath = Path(output_dir) / Path(root).relative_to(input_dir) / (Path(file).stem + "_rfa.ASC")
                 
-                w2file = W2Parser(input_path)
+                w2file = W2Parser(input_filepath)
                 w2file.read_w2()
-                w2file.write_rfa_file(output_path)
+                w2file.write_rfa_file(output_filepath)
 
 if __name__ == "__main__":
     results_directory = Path(ROOT_DIR).joinpath("rfa_W2CAD/")
     varian_w2cad_directory = Path(ROOT_DIR).joinpath("references/TB_RepresentativeData_Eclipse/W2CAD/")
 
+    # Make all the subdirectories in the results directory
     for sub_dir in varian_w2cad_directory.glob("**/"):
         if sub_dir.is_dir():
             output_dir = results_directory / sub_dir.relative_to(varian_w2cad_directory)
             output_dir.mkdir(parents=True, exist_ok=True)
     
+    # Process all the files
     process_files(varian_w2cad_directory, results_directory)
