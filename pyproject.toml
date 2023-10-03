@@ -1,18 +1,16 @@
 [tool.poetry]
-name = "bidmc_py"
+name = "tb_representative_beam_converter"
 version = "0.1.0"
-description = "Python scripts at BIDMC"
-authors = ["mf <shiliangfan@gmail.com>"]
+description = "Varian TB Representative Beam Converter"
+authors = ["mf"]
 license = "MIT"
 readme = "README.md"
-packages = [{include = "bidmc_py"}]
 
 [tool.poetry.dependencies]
 python = "^3.11"
 
 [tool.poetry.group.production.dependencies]
 pydicom = "^2.3.0"
-jupyterlab = "^3.5.0"
 
 [build-system]
 requires = ["poetry-core"]
@@ -26,7 +24,7 @@ mypy = "^0.991"
 pytest = "^7.2.1"
 ipython = "^8.14.0"
 
-[tool.black]`
+[tool.black]
 line-length = 99
 
 [tool.isort]
